@@ -1,0 +1,8 @@
+/build/
+/frontend/node_modules/
+/frontend/dist/
+/coverage.out
+/.agents/
+*.log
+.env
+.env.*
