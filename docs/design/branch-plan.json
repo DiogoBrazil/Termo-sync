@@ -1,0 +1,377 @@
+{
+  "version": 1,
+  "runId": "local-79d0c9b0fa222b41130b5a8d67e9dcd211bdfddd",
+  "concept": "Aplicativo desktop individual Depoimento Studio, direção editorial clara aprovada. Gerar estados: 1 início com selecionar um arquivo local; 2 consentimento AssemblyAI por arquivo, escolha manual de trilha e aviso hesitações português sem garantia; 3 processamento com cancelar; 4 falantes A/B com trechos e escolha manual depoente; 5 consentimento DeepSeek e escolha diálogo padrão ou narrativa somente depoente; 6 comparação original imutável e proposta editável, flags de números/negação, copiar, exportar TXT, exclusão remota AssemblyAI manual; 7 configurações com inputs password API Keys AssemblyAI e DeepSeek, salvar/remover, modelo deepseek-flash ou deepseek-v4-pro. Preservar duas colunas documentais e hierarquia da referência. Sem projetos, equipes, contas, avatares, colaboração, copiloto, áudio playback, histórico, OpenAI ou provedores extras. Um arquivo por vez. Incluir claro/escuro e responsividade por abas em janela estreita, foco visível. Dados fictícios apenas. Não mostrar consentimento pré-marcado nem afirmar precisão garantida.",
+  "aspect": "landscape",
+  "scope": "site",
+  "sitePurpose": "Permitir que uma pessoa transcreva e revise um arquivo de depoimento com consentimento por serviço e preservação do original.",
+  "statusUpdate": "Vou completar o fluxo individual de importação, consentimento, processamento e identificação de falantes até a preparação da proposta. Também vou incluir a conferência final e as configurações dos dois serviços.",
+  "approvedScreenSummary": "A tela aprovada apresenta uma revisão em andamento com original imutável, proposta editável, trechos de pergunta e resposta, indicadores de arquivo, transcrição, falantes e consentimento, além de copiar e exportar TXT. Também exibe reprodução de áudio, projetos, convite, avatar, copiloto e referências a OpenAI e Whisper, elementos excluídos pelo brief.",
+  "winnerCanvas": {
+    "width": 1536,
+    "height": 1024
+  },
+  "pages": [
+    {
+      "index": 0,
+      "id": "p0-revis-o-do-depoimento",
+      "kind": "source",
+      "title": "Revisão do depoimento",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Comparar a transcrição original com a proposta e conferir alterações antes de concluir a revisão.",
+      "startsFromWinner": true,
+      "slots": [
+        "a"
+      ]
+    },
+    {
+      "index": 1,
+      "id": "p1-arquivo-e-consentimento-de-transcri-o",
+      "kind": "additional",
+      "title": "Arquivo e consentimento de transcrição",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Selecionar um único arquivo local e autorizar seu envio à AssemblyAI.",
+      "startsFromWinner": false,
+      "slots": [
+        "b",
+        "c"
+      ]
+    },
+    {
+      "index": 2,
+      "id": "p2-processamento-e-falantes",
+      "kind": "additional",
+      "title": "Processamento e falantes",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Acompanhar a transcrição autorizada e identificar manualmente quem presta o depoimento.",
+      "startsFromWinner": false,
+      "slots": [
+        "d",
+        "e"
+      ]
+    },
+    {
+      "index": 3,
+      "id": "p3-preparar-proposta",
+      "kind": "additional",
+      "title": "Preparar proposta",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Escolher o formato do texto e autorizar o envio da transcrição à DeepSeek.",
+      "startsFromWinner": false,
+      "slots": [
+        "f"
+      ]
+    },
+    {
+      "index": 4,
+      "id": "p4-configura-es",
+      "kind": "additional",
+      "title": "Configurações",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Gerenciar credenciais dos serviços, modelo de transformação e preferência de tema.",
+      "startsFromWinner": false,
+      "slots": [
+        "g"
+      ]
+    }
+  ],
+  "screens": [
+    {
+      "slot": "a",
+      "pageIndex": 0,
+      "viewportOrdinal": 2,
+      "status": "pending",
+      "direction": "Revisão do depoimento (part 2)",
+      "header": null,
+      "footer": null,
+      "pageEndsHere": true,
+      "dependsOnSlot": null,
+      "width": 1536,
+      "height": 1024,
+      "canvasDecision": {
+        "provenance": "inherited-from-winner",
+        "sourceCanvas": {
+          "width": 1536,
+          "height": 1024
+        }
+      },
+      "content": "Na proposta atual, conferir alertas de números e negações: “quinze” foi alterado para “cinquenta” e uma negação foi omitida. Permitir manter ou corrigir cada alteração. Disponibilizar exclusão remota manual do arquivo na AssemblyAI, com confirmação e resultado da solicitação."
+    },
+    {
+      "slot": "b",
+      "pageIndex": 1,
+      "viewportOrdinal": 1,
+      "status": "pending",
+      "direction": "Arquivo e consentimento de transcrição",
+      "header": null,
+      "footer": null,
+      "pageEndsHere": false,
+      "dependsOnSlot": null,
+      "width": 1536,
+      "height": 1024,
+      "canvasDecision": {
+        "provenance": "inherited-from-winner",
+        "sourceCanvas": {
+          "width": 1536,
+          "height": 1024
+        }
+      },
+      "content": "Iniciar um depoimento escolhendo um arquivo local. Após selecionar relato-feira.wav, apresentar nome, duração fictícia de 02:18 e opção de substituir a seleção. Aceitar apenas um arquivo por vez e oferecer continuidade para conferir trilha e consentimento antes de qualquer envio."
+    },
+    {
+      "slot": "c",
+      "pageIndex": 1,
+      "viewportOrdinal": 2,
+      "status": "pending",
+      "direction": "Arquivo e consentimento de transcrição (part 2)",
+      "header": null,
+      "footer": null,
+      "pageEndsHere": true,
+      "dependsOnSlot": "b",
+      "width": 1536,
+      "height": 1024,
+      "canvasDecision": {
+        "provenance": "inherited-from-winner",
+        "sourceCanvas": {
+          "width": 1536,
+          "height": 1024
+        }
+      },
+      "content": "Para relato-feira.wav, exigir escolha manual da trilha de áudio e consentimento específico, inicialmente desmarcado, para envio à AssemblyAI. Explicar a finalidade da transcrição e avisar que hesitações em português podem não ser reconhecidas corretamente, sem garantia de precisão. Permitir iniciar ou voltar."
+    },
+    {
+      "slot": "d",
+      "pageIndex": 2,
+      "viewportOrdinal": 1,
+      "status": "pending",
+      "direction": "Processamento e falantes",
+      "header": null,
+      "footer": null,
+      "pageEndsHere": false,
+      "dependsOnSlot": null,
+      "width": 1536,
+      "height": 1024,
+      "canvasDecision": {
+        "provenance": "inherited-from-winner",
+        "sourceCanvas": {
+          "width": 1536,
+          "height": 1024
+        }
+      },
+      "content": "Acompanhar o processamento de relato-feira.wav com a trilha escolhida, etapa atual e tempo decorrido fictício, sem estimativas garantidas. Oferecer cancelar e informar o resultado do cancelamento. Quando a transcrição terminar, permitir seguir para identificar o depoente."
+    },
+    {
+      "slot": "e",
+      "pageIndex": 2,
+      "viewportOrdinal": 2,
+      "status": "pending",
+      "direction": "Processamento e falantes (part 2)",
+      "header": null,
+      "footer": null,
+      "pageEndsHere": true,
+      "dependsOnSlot": "d",
+      "width": 1536,
+      "height": 1024,
+      "canvasDecision": {
+        "provenance": "inherited-from-winner",
+        "sourceCanvas": {
+          "width": 1536,
+          "height": 1024
+        }
+      },
+      "content": "Apresentar trechos transcritos dos falantes A e B: A pergunta sobre a feira do bairro; B relata sua experiência como feirante. Exigir escolha manual do depoente, sem seleção inicial, permitir corrigir os nomes e continuar com B identificado como depoente."
+    },
+    {
+      "slot": "f",
+      "pageIndex": 3,
+      "viewportOrdinal": 1,
+      "status": "pending",
+      "direction": "Preparar proposta",
+      "header": null,
+      "footer": null,
+      "pageEndsHere": true,
+      "dependsOnSlot": null,
+      "width": 1536,
+      "height": 1024,
+      "canvasDecision": {
+        "provenance": "inherited-from-winner",
+        "sourceCanvas": {
+          "width": 1536,
+          "height": 1024
+        }
+      },
+      "content": "Manter relato-feira.wav e B como depoente. Oferecer diálogo como formato padrão ou narrativa somente do depoente. Solicitar consentimento desmarcado para enviar a transcrição à DeepSeek, explicar a finalidade e permitir gerar a proposta para revisão, preservando o original."
+    },
+    {
+      "slot": "g",
+      "pageIndex": 4,
+      "viewportOrdinal": 1,
+      "status": "pending",
+      "direction": "Configurações",
+      "header": null,
+      "footer": null,
+      "pageEndsHere": true,
+      "dependsOnSlot": null,
+      "width": 1536,
+      "height": 1024,
+      "canvasDecision": {
+        "provenance": "inherited-from-winner",
+        "sourceCanvas": {
+          "width": 1536,
+          "height": 1024
+        }
+      },
+      "content": "Disponibilizar campos password separados para API Keys AssemblyAI e DeepSeek, com salvar, remover e retorno de sucesso ou erro. Permitir escolher deepseek-flash ou deepseek-v4-pro e tema claro ou escuro. Usar credenciais fictícias e preservar o arquivo em andamento ao retornar."
+    }
+  ],
+  "packagePages": [
+    {
+      "index": 0,
+      "id": "p0-revis-o-do-depoimento",
+      "kind": "source",
+      "title": "Revisão do depoimento",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Comparar a transcrição original com a proposta e conferir alterações antes de concluir a revisão.",
+      "startsFromWinner": true,
+      "slots": [],
+      "packageLineage": {
+        "pageIndex": 0,
+        "pageId": "p0-revis-o-do-depoimento",
+        "viewportOrdinal": 1,
+        "state": "winner"
+      }
+    },
+    {
+      "index": 0,
+      "id": "p0-revis-o-do-depoimento-a",
+      "kind": "additional",
+      "title": "Revisão do depoimento (part 2)",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Na proposta atual, conferir alertas de números e negações: “quinze” foi alterado para “cinquenta” e uma negação foi omitida. Permitir manter ou corrigir cada alteração. Disponibilizar exclusão remota manual do arquivo na AssemblyAI, com confirmação e resultado da solicitação.",
+      "startsFromWinner": false,
+      "slots": [
+        "a"
+      ],
+      "packageLineage": {
+        "pageIndex": 0,
+        "pageId": "p0-revis-o-do-depoimento",
+        "viewportOrdinal": 2,
+        "state": "screen",
+        "slot": "a"
+      }
+    },
+    {
+      "index": 1,
+      "id": "p1-arquivo-e-consentimento-de-transcri-o",
+      "kind": "additional",
+      "title": "Arquivo e consentimento de transcrição",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Iniciar um depoimento escolhendo um arquivo local. Após selecionar relato-feira.wav, apresentar nome, duração fictícia de 02:18 e opção de substituir a seleção. Aceitar apenas um arquivo por vez e oferecer continuidade para conferir trilha e consentimento antes de qualquer envio.",
+      "startsFromWinner": false,
+      "slots": [
+        "b"
+      ],
+      "packageLineage": {
+        "pageIndex": 1,
+        "pageId": "p1-arquivo-e-consentimento-de-transcri-o",
+        "viewportOrdinal": 1,
+        "state": "screen",
+        "slot": "b"
+      }
+    },
+    {
+      "index": 1,
+      "id": "p1-arquivo-e-consentimento-de-transcri-o-c",
+      "kind": "additional",
+      "title": "Arquivo e consentimento de transcrição (part 2)",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Para relato-feira.wav, exigir escolha manual da trilha de áudio e consentimento específico, inicialmente desmarcado, para envio à AssemblyAI. Explicar a finalidade da transcrição e avisar que hesitações em português podem não ser reconhecidas corretamente, sem garantia de precisão. Permitir iniciar ou voltar.",
+      "startsFromWinner": false,
+      "slots": [
+        "c"
+      ],
+      "packageLineage": {
+        "pageIndex": 1,
+        "pageId": "p1-arquivo-e-consentimento-de-transcri-o",
+        "viewportOrdinal": 2,
+        "state": "screen",
+        "slot": "c"
+      }
+    },
+    {
+      "index": 2,
+      "id": "p2-processamento-e-falantes",
+      "kind": "additional",
+      "title": "Processamento e falantes",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Acompanhar o processamento de relato-feira.wav com a trilha escolhida, etapa atual e tempo decorrido fictício, sem estimativas garantidas. Oferecer cancelar e informar o resultado do cancelamento. Quando a transcrição terminar, permitir seguir para identificar o depoente.",
+      "startsFromWinner": false,
+      "slots": [
+        "d"
+      ],
+      "packageLineage": {
+        "pageIndex": 2,
+        "pageId": "p2-processamento-e-falantes",
+        "viewportOrdinal": 1,
+        "state": "screen",
+        "slot": "d"
+      }
+    },
+    {
+      "index": 2,
+      "id": "p2-processamento-e-falantes-e",
+      "kind": "additional",
+      "title": "Processamento e falantes (part 2)",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Apresentar trechos transcritos dos falantes A e B: A pergunta sobre a feira do bairro; B relata sua experiência como feirante. Exigir escolha manual do depoente, sem seleção inicial, permitir corrigir os nomes e continuar com B identificado como depoente.",
+      "startsFromWinner": false,
+      "slots": [
+        "e"
+      ],
+      "packageLineage": {
+        "pageIndex": 2,
+        "pageId": "p2-processamento-e-falantes",
+        "viewportOrdinal": 2,
+        "state": "screen",
+        "slot": "e"
+      }
+    },
+    {
+      "index": 3,
+      "id": "p3-preparar-proposta",
+      "kind": "additional",
+      "title": "Preparar proposta",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Escolher o formato do texto e autorizar o envio da transcrição à DeepSeek.",
+      "startsFromWinner": false,
+      "slots": [
+        "f"
+      ]
+    },
+    {
+      "index": 4,
+      "id": "p4-configura-es",
+      "kind": "additional",
+      "title": "Configurações",
+      "pageType": "application",
+      "surfaceType": "web_app",
+      "purpose": "Gerenciar credenciais dos serviços, modelo de transformação e preferência de tema.",
+      "startsFromWinner": false,
+      "slots": [
+        "g"
+      ]
+    }
+  ]
+}

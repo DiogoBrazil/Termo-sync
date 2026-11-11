@@ -1,0 +1,21 @@
+{
+  "purpose": "local-development-test-only",
+  "redistribution_verified": false,
+  "archive": "ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip",
+  "archive_sha256": "b96be85e024a68514876582e19a80062152cc499cb38efd70e9db72f7108d9c5",
+  "vendor_checksum_matched": true,
+  "url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip",
+  "retrieved": "2026-11-11",
+  "license_label": "LGPL-3.0; whole-build source and dependency verification pending",
+  "files": {
+    "avcodec-62.dll": "960cd04d340d306d42c3ab44c509afaab909b6ea5fb43bbebd0f46c0e28d7b59",
+    "avdevice-62.dll": "d456e87c07bf51e1b10b541a84d80740411a73f4235b59376821b228406979e2",
+    "swscale-9.dll": "d35ada265eedcf3cb607c10078cf187fcfce667c5a5f93ed9d4947b6a7d9f6b5",
+    "ffmpeg.exe": "6de2d2bc582d24de2c17668af6a20488b8f7ab5920a84429930f1b1ac68dc97e",
+    "avformat-62.dll": "9de269310d55799c7935d41d687788c62296f42762e57017d10092313d27596f",
+    "avutil-60.dll": "7a79145307f18b706048ce2352c2ffb504f4144bf4e0043840183e88e59eb7d9",
+    "avfilter-11.dll": "a3d7255b57fa2076ecb17fa83dffe5c95df7b50622bebdff7ebaadf15b532954",
+    "swresample-6.dll": "eb308a3bb0d843a0db001fd1e8df7967471b0678562c823d26191332b1573aa2",
+    "ffprobe.exe": "6008cc7157219bc40296263dbe2a116b7c786eab837e2c4654762883e3303397"
+  }
+}
