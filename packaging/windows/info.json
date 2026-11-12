@@ -1,0 +1,13 @@
+{
+	"fixed": {
+		"file_version": "0.1.0"
+	},
+	"info": {
+		"0409": {
+			"ProductVersion": "0.1.0",
+			"FileDescription": "Depoimento Studio",
+			"ProductName": "Depoimento Studio",
+			"Comments": "Transcrição e revisão conservadora de depoimentos"
+		}
+	}
+}
