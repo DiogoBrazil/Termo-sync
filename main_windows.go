@@ -39,7 +39,7 @@ func (b *Bridge) RemoveKey(provider string) error    { return b.backend.RemoveKe
 func (b *Bridge) SetModel(model string) error        { return b.backend.SetModel(model) }
 func (b *Bridge) View() app.View                     { return b.backend.View() }
 func (b *Bridge) SelectFile() error {
-	dlg := b.desktop.Dialog.OpenFile().SetTitle("Selecionar áudio ou vídeo").AddFilter("Áudio e vídeo", "*.mp3;*.wav;*.m4a;*.mp4;*.mkv;*.mov;*.ogg;*.flac;*.webm;*.aac")
+	dlg := b.desktop.Dialog.OpenFile().SetTitle("Selecionar áudio ou vídeo").AddFilter("Áudio e vídeo", "*.mp3;*.wav;*.m4a;*.aac;*.ogg;*.opus;*.flac;*.wma;*.mp4;*.mkv;*.mov;*.webm;*.avi;*.wmv")
 	if b.window != nil {
 		dlg.AttachToWindow(b.window)
 	}
@@ -52,17 +52,11 @@ func (b *Bridge) SelectFile() error {
 	}
 	return b.backend.Open(path)
 }
-func (b *Bridge) SelectTrack(id uint64, track int) error   { return b.backend.SelectTrack(id, track) }
-func (b *Bridge) Identify(id uint64, speaker string) error { return b.backend.Identify(id, speaker) }
-func (b *Bridge) StartTranscription(id uint64, consent, limitation bool) error {
-	return b.backend.StartTranscription(id, consent, limitation)
-}
-func (b *Bridge) StartReview(id uint64, consent, narrative bool) error {
-	return b.backend.StartReview(id, consent, narrative)
-}
-func (b *Bridge) RetryReview(id uint64) error       { return b.backend.RetryReview(id) }
-func (b *Bridge) Cancel(id uint64) error            { return b.backend.Cancel(id) }
-func (b *Bridge) Edit(id uint64, text string) error { return b.backend.Edit(id, text) }
+func (b *Bridge) SelectTrack(id uint64, track int) error { return b.backend.SelectTrack(id, track) }
+func (b *Bridge) Start(id uint64) error                  { return b.backend.Start(id) }
+func (b *Bridge) RetryReview(id uint64) error            { return b.backend.RetryReview(id) }
+func (b *Bridge) Cancel(id uint64) error                 { return b.backend.Cancel(id) }
+func (b *Bridge) Edit(id uint64, text string) error      { return b.backend.Edit(id, text) }
 func (b *Bridge) DeleteRemote(id uint64, confirmed bool) error {
 	return b.backend.DeleteRemote(id, confirmed)
 }
@@ -71,6 +65,16 @@ func (b *Bridge) KeepRemote(id uint64, confirmed bool) error {
 }
 func (b *Bridge) Copy() error {
 	text, err := b.backend.Text()
+	if err != nil {
+		return err
+	}
+	if !b.desktop.Clipboard.SetText(text) {
+		return errors.New("não foi possível copiar")
+	}
+	return nil
+}
+func (b *Bridge) CopyOriginal() error {
+	text, err := b.backend.OriginalText()
 	if err != nil {
 		return err
 	}

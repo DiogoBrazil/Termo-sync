@@ -22,6 +22,7 @@ type Revision struct {
 	PromptVersion string
 }
 
+// Review sends one batch of the single deponent's transcript.
 func (c *Client) Review(ctx context.Context, key, model string, input []editorial.Segment, authorized bool) (Revision, error) {
 	var result Revision
 	if !authorized {
@@ -37,7 +38,7 @@ func (c *Client) Review(ctx context.Context, key, model string, input []editoria
 	if err != nil {
 		return result, err
 	}
-	instruction := editorial.Policy + ` Retorne somente JSON com a chave segments contendo um array de objetos id, speaker e text. Preserve exatamente os identificadores, falantes, ordem e quantidade. Cada segmento é independente; nunca use o conteúdo de outro segmento para completar uma resposta. Não escreva introdução ou conclusão. Remova repetições apenas se não tiverem função semântica. Não transforme diálogo em narrativa nesta etapa.`
+	instruction := editorial.Instruction()
 	body, err := json.Marshal(map[string]any{"model": model, "thinking": map[string]string{"type": "disabled"}, "stream": false, "max_tokens": 16384, "response_format": map[string]string{"type": "json_object"}, "messages": []map[string]string{{"role": "system", "content": instruction}, {"role": "user", "content": string(data)}}})
 	if err != nil {
 		return result, err
@@ -56,8 +57,11 @@ func (c *Client) Review(ctx context.Context, key, model string, input []editoria
 	if err = c.request(ctx, "POST", "https://api.deepseek.com/chat/completions", key, bytes.NewReader(body), &response); err != nil {
 		return result, err
 	}
+	if len(response.Choices) == 1 && response.Choices[0].Finish == "length" {
+		return result, errors.New("o ajuste do texto foi interrompido por limite de tamanho; a proposta incompleta foi descartada")
+	}
 	if len(response.Choices) != 1 || response.Choices[0].Finish != "stop" {
-		return result, errors.New("revisão incompleta ou truncada")
+		return result, errors.New("o ajuste do texto não foi concluído")
 	}
 	if response.Model == "" || response.Usage == nil || response.Usage.Prompt < 0 || response.Usage.Completion <= 0 || response.Usage.Total != response.Usage.Prompt+response.Usage.Completion {
 		return result, errors.New("metadados de revisão ausentes ou inválidos")

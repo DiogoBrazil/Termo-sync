@@ -48,7 +48,7 @@ func TestWorkflowWithSyntheticMediaAndMockProviders(t *testing.T) {
 		switch r.URL.Path {
 		case "/v2/upload":
 		case "/v2/transcript":
-			data = `{"id":"abc","status":"completed","text":"Não vi 12 pessoas.","utterances":[{"speaker":"B","text":"Não vi 12 pessoas.","start":0,"end":100}]}`
+			data = `{"id":"abc","status":"completed","text":"Não vi 12 pessoas.","utterances":[{"speaker":"A","text":"Não vi 12 pessoas.","start":0,"end":100},{"speaker":"B","text":"Ouvi dizer.","start":100,"end":200}]}`
 		case "/chat/completions":
 			var body struct {
 				Messages []struct {
@@ -75,13 +75,7 @@ func TestWorkflowWithSyntheticMediaAndMockProviders(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := s.View().Document.ID
-	if err := s.StartTranscription(id, false, true); err == nil {
-		t.Fatal("no consent")
-	}
-	if err := s.StartTranscription(id, true, false); err == nil {
-		t.Fatal("no limitation acknowledgment")
-	}
-	if err := s.StartTranscription(id, true, true); err != nil {
+	if err := s.Start(id); err != nil {
 		t.Fatal(err)
 	}
 	await := func(state State) {
@@ -99,13 +93,6 @@ func TestWorkflowWithSyntheticMediaAndMockProviders(t *testing.T) {
 		}
 		t.Fatal("workflow timeout")
 	}
-	await(AwaitSpeaker)
-	if err := s.Identify(id, "B"); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.StartReview(id, true, false); err != nil {
-		t.Fatal(err)
-	}
 	await(Ready)
 	if err := s.Edit(id, "Edição humana."); err != nil {
 		t.Fatal(err)
@@ -113,6 +100,12 @@ func TestWorkflowWithSyntheticMediaAndMockProviders(t *testing.T) {
 	text, err := s.Text()
 	if err != nil || text != "Edição humana." {
 		t.Fatal("human edit lost")
+	}
+	if s.View().Document.Proposal != "Não vi 12 pessoas.\n\nOuvi dizer." {
+		t.Fatalf("proposal must join every segment without speaker labels: %q", s.View().Document.Proposal)
+	}
+	if original, _ := s.OriginalText(); original != "[00:00] Não vi 12 pessoas.\n\n[00:00] Ouvi dizer." {
+		t.Fatalf("original text: %q", original)
 	}
 	if s.View().Document.Original.Text != "Não vi 12 pessoas." {
 		t.Fatal("original changed")

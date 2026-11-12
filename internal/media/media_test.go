@@ -35,7 +35,7 @@ func TestSyntheticMedia(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	direct, clean, err := tools.Prepare(ctx, mp3, info, info.Streams[0].Index)
+	direct, clean, err := tools.Prepare(ctx, mp3, info, info.Streams[0].Index, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestSyntheticMedia(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	output, cleanup, err := tools.Prepare(ctx, video, info, info.Streams[0].Index)
+	output, cleanup, err := tools.Prepare(ctx, video, info, info.Streams[0].Index, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestSyntheticMedia(t *testing.T) {
 	if err != nil || len(info.Streams) != 2 {
 		t.Fatalf("ambiguous tracks lost: %v", err)
 	}
-	if _, cleanup, err := tools.Prepare(ctx, multi, info, 999); err == nil {
+	if _, cleanup, err := tools.Prepare(ctx, multi, info, 999, nil); err == nil {
 		cleanup()
 		t.Fatal("unknown track")
 	}
@@ -96,7 +96,7 @@ func TestSyntheticMedia(t *testing.T) {
 		t.Fatal(err)
 	}
 	failing := Tools{FFmpeg: filepath.Join(dir, "missing-ffmpeg"), FFprobe: ffprobe}
-	if _, cleanup, err := failing.Prepare(ctx, video, info, info.Streams[0].Index); err == nil {
+	if _, cleanup, err := failing.Prepare(ctx, video, info, info.Streams[0].Index, nil); err == nil {
 		cleanup()
 		t.Fatal("missing executable accepted")
 	}
@@ -113,6 +113,8 @@ func TestSyntheticMedia(t *testing.T) {
 	}
 	oldDir := filepath.Join(root, "session-stale")
 	freshDir := filepath.Join(root, "session-fresh")
+	// On Windows the cache root is the real one: leave nothing behind for the next run.
+	t.Cleanup(func() { _ = os.RemoveAll(oldDir); _ = os.RemoveAll(freshDir) })
 	for _, d := range []string{oldDir, freshDir} {
 		if err := os.MkdirAll(d, 0700); err != nil {
 			t.Fatal(err)

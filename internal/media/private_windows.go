@@ -8,7 +8,13 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"syscall"
 )
+
+// hideWindow prevents console windows from flashing when the GUI app runs console tools.
+func hideWindow(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000} // CREATE_NO_WINDOW
+}
 
 func privateDirectory(path string) error {
 	u, err := user.Current()
@@ -17,7 +23,9 @@ func privateDirectory(path string) error {
 	}
 	// Absolute system executable, SID based grant, inheritance removed.
 	tool := filepath.Join(os.Getenv("SystemRoot"), "System32", "icacls.exe")
-	if err := exec.Command(tool, path, "/inheritance:r", "/grant:r", "*"+u.Uid+":(OI)(CI)F").Run(); err != nil {
+	cmd := exec.Command(tool, path, "/inheritance:r", "/grant:r", "*"+u.Uid+":(OI)(CI)F")
+	hideWindow(cmd)
+	if err := cmd.Run(); err != nil {
 		return errors.New("não foi possível aplicar ACL privada")
 	}
 	return nil

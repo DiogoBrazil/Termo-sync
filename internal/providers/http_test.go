@@ -66,7 +66,7 @@ func TestHTTPDestinationAndCancellation(t *testing.T) {
 	if err := c.request(ctx, "GET", "https://api.assemblyai.com/v2/transcript/id", "key", nil, nil); !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancellation lost: %v", err)
 	}
-	if _, err := c.Transcribe(context.Background(), "key", "nonexistent", false); err == nil {
+	if _, err := c.Transcribe(context.Background(), "key", "nonexistent", false, nil); err == nil {
 		t.Fatal("missing consent")
 	}
 }

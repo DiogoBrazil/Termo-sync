@@ -22,10 +22,7 @@ type Change struct {
 }
 
 // Batches never split an utterance or silently drop oversized units.
-func Batches(t domain.Transcript, speaker string, narrative bool, maxRunes int) ([][]Segment, error) {
-	if _, err := Input(t, speaker, narrative); err != nil {
-		return nil, err
-	}
+func Batches(t domain.Transcript, maxRunes int) ([][]Segment, error) {
 	if maxRunes < 1 {
 		return nil, errors.New("limite de segmentação inválido")
 	}
@@ -33,9 +30,6 @@ func Batches(t domain.Transcript, speaker string, narrative bool, maxRunes int) 
 	var current []Segment
 	size := 0
 	for i, u := range t.Utterances {
-		if narrative && u.Speaker != speaker {
-			continue
-		}
 		n := utf8.RuneCountInString(u.Text) + 100
 		if n > maxRunes {
 			return nil, errors.New("segmento excede limite; divida manualmente sem perder conteúdo")

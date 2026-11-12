@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"termo-sync/internal/credentials"
@@ -19,7 +20,14 @@ type Settings struct {
 	Model                string
 }
 type View struct {
-	Document      Snapshot
+	Document Snapshot
+	// Format, Duration (seconds) and Size (bytes) come from the local ffprobe inspection.
+	Format   string
+	Duration float64
+	Size     int64
+	// Stage names the running step; Progress is a real fraction in [0,1] or -1 when not measurable.
+	Stage         string
+	Progress      float64
 	Tracks        []media.Track
 	Busy          bool
 	Error         string
@@ -45,6 +53,34 @@ type Service struct {
 	model         string
 	remoteID      string
 	remoteDeleted bool
+	stage         string
+	progress      float64
+}
+
+func (s *Service) report(stage string, fraction float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.busy {
+		s.stage, s.progress = stage, fraction
+	}
+}
+
+// describe turns internal failures into the message shown to the user.
+func describe(err error) string {
+	switch {
+	case errors.Is(err, context.Canceled):
+		return "Processamento cancelado. Nada do que já foi obtido nesta sessão foi descartado."
+	case errors.Is(err, context.DeadlineExceeded):
+		return "Tempo limite de processamento excedido."
+	}
+	text := err.Error()
+	if r := []rune(text); len(r) > 0 {
+		text = strings.ToUpper(string(r[:1])) + string(r[1:])
+	}
+	if !strings.HasSuffix(text, ".") {
+		text += "."
+	}
+	return text
 }
 
 func NewService(store credentials.Store, client *providers.Client, tools media.Tools) *Service {
@@ -100,7 +136,9 @@ func (s *Service) View() View {
 	for i := range changes {
 		changes[i].Flags = append([]string(nil), changes[i].Flags...)
 	}
-	return View{Document: s.session.Snapshot(), Tracks: tracks, Busy: s.busy, Error: s.message, Changes: changes, RemoteID: s.remoteID, RemoteDeleted: s.remoteDeleted}
+	duration, _ := strconv.ParseFloat(s.info.Format.Duration, 64)
+	size, _ := strconv.ParseInt(s.info.Format.Size, 10, 64)
+	return View{Format: s.info.Format.Name, Duration: duration, Size: size, Stage: s.stage, Progress: s.progress, Revisions: append([]providers.Revision(nil), s.revisions...), Document: s.session.Snapshot(), Tracks: tracks, Busy: s.busy, Error: s.message, Changes: changes, RemoteID: s.remoteID, RemoteDeleted: s.remoteDeleted}
 }
 
 // Open is called with a native-dialog path, never an arbitrary path from web content.
@@ -111,7 +149,7 @@ func (s *Service) Open(path string) error {
 		return errors.New("cancele e aguarde o trabalho atual")
 	}
 	if s.remoteID != "" && !s.remoteDeleted {
-		return errors.New("exclua a transcrição remota ou confirme que deseja mantê-la antes de trocar de arquivo")
+		return errors.New("antes de trocar de arquivo, exclua o registro do arquivo atual ou confirme que deseja mantê-lo")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -138,16 +176,34 @@ func (s *Service) KeepRemote(id uint64, confirmed bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.busy || !confirmed || s.session.Snapshot().ID != id {
-		return errors.New("confirmação de retenção remota inválida")
+		return errors.New("confirmação inválida para manter o registro")
 	}
 	// This only dismisses the session reminder, never claims remote deletion.
 	s.remoteID = ""
 	return nil
 }
-func (s *Service) SelectTrack(id uint64, track int) error   { return s.session.SelectTrack(id, track) }
-func (s *Service) Identify(id uint64, speaker string) error { return s.session.Identify(id, speaker) }
-func (s *Service) Edit(id uint64, text string) error        { return s.session.Edit(id, text) }
-func (s *Service) RetryReview(id uint64) error              { return s.session.RetryReview(id) }
+func (s *Service) SelectTrack(id uint64, track int) error { return s.session.SelectTrack(id, track) }
+func (s *Service) Edit(id uint64, text string) error      { return s.session.Edit(id, text) }
+
+// OriginalText formats the immutable transcript exactly as displayed, for copying.
+func (s *Service) OriginalText() (string, error) {
+	t := s.session.Snapshot().Original
+	if len(t.Utterances) == 0 {
+		if t.Text == "" {
+			return "", errors.New("transcrição ainda indisponível")
+		}
+		return t.Text, nil
+	}
+	var b strings.Builder
+	for i, u := range t.Utterances {
+		if i > 0 {
+			b.WriteString("\n\n")
+		}
+		seconds := u.Start / 1000
+		fmt.Fprintf(&b, "[%02d:%02d] %s", seconds/60, seconds%60, u.Text)
+	}
+	return b.String(), nil
+}
 func (s *Service) Text() (string, error) {
 	d := s.session.Snapshot()
 	if d.HasEdits {
@@ -158,101 +214,127 @@ func (s *Service) Text() (string, error) {
 	}
 	return "", errors.New("proposta ainda indisponível")
 }
-func (s *Service) StartTranscription(id uint64, authorized, portugueseLimitationAccepted bool) error {
+
+// Start runs the whole processing of the current file: local preparation, transcription and review.
+// Both keys are checked first so a paid transcription is not left without its review.
+func (s *Service) Start(id uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.busy {
 		return errors.New("processamento em andamento")
-	}
-	if !portugueseLimitationAccepted {
-		return errors.New("confirme a limitação de hesitações em português e a necessidade de conferir o áudio")
 	}
 	key, err := s.store.Get("assemblyai")
 	if err != nil {
 		return err
 	}
-	if err = s.session.Authorize(id, "assemblyai", authorized); err != nil {
+	reviewKey, err := s.store.Get("deepseek")
+	if err != nil {
+		return err
+	}
+	if key == "" || reviewKey == "" {
+		return errors.New("configure as chaves de API antes de iniciar")
+	}
+	if err = s.session.Begin(id); err != nil {
 		return err
 	}
 	d := s.session.Snapshot()
 	info := s.info
+	model := s.model
 	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Hour)
 	s.cancel = cancel
 	s.busy = true
 	s.message = ""
+	s.stage, s.progress = "validating", -1
 	go func() {
 		defer cancel()
-		path, clean, err := s.tools.Prepare(ctx, d.File, info, d.Track)
+		path, clean, err := s.tools.Prepare(ctx, d.File, info, d.Track, s.report)
 		defer clean()
 		if err != nil {
+			s.session.TranscriptionFailed(id)
 			s.finish(err)
 			return
 		}
-		t, err := s.client.Transcribe(ctx, key, path, true)
+		t, err := s.client.Transcribe(ctx, key, path, true, s.report)
 		s.mu.Lock()
-		s.remoteID = t.ID
+		if t.ID != "" {
+			s.remoteID = t.ID
+			s.remoteDeleted = false
+		}
 		s.mu.Unlock()
 		if err == nil {
 			err = s.session.Transcribed(id, t)
 		}
-		s.finish(err)
+		if err != nil {
+			s.session.TranscriptionFailed(id)
+			s.finish(err)
+			return
+		}
+		clean()
+		s.finish(s.review(ctx, id, reviewKey, model))
 	}()
 	return nil
 }
-func (s *Service) StartReview(id uint64, authorized, narrative bool) error {
+
+// RetryReview repeats only the review of the transcript already obtained.
+func (s *Service) RetryReview(id uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.busy {
 		return errors.New("processamento em andamento")
 	}
-	d := s.session.Snapshot()
-	batches, err := editorial.Batches(d.Original, d.Speaker, narrative, 12000)
-	if err != nil {
-		return err
-	}
 	key, err := s.store.Get("deepseek")
 	if err != nil {
 		return err
 	}
-	if err = s.session.Authorize(id, "deepseek", authorized); err != nil {
+	if key == "" {
+		return errors.New("configure as chaves de API antes de iniciar")
+	}
+	if err = s.session.RetryReview(id); err != nil {
 		return err
 	}
+	model := s.model
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
 	s.cancel = cancel
 	s.busy = true
 	s.message = ""
-	model := s.model
 	go func() {
 		defer cancel()
-		var text strings.Builder
-		var changes []editorial.Change
-		var revisions []providers.Revision
-		for _, batch := range batches {
-			result, err := s.client.Review(ctx, key, model, batch, true)
-			if err != nil {
-				_ = s.session.Reviewed(id, "", false)
-				s.finish(err)
-				return
-			}
-			changes = append(changes, result.Changes...)
-			revisions = append(revisions, result)
-			for _, seg := range result.Segments {
-				if narrative {
-					fmt.Fprintf(&text, "%s\n\n", seg.Text)
-				} else {
-					fmt.Fprintf(&text, "Falante %s: %s\n\n", seg.Speaker, seg.Text)
-				}
-			}
-		}
-		err := s.session.Reviewed(id, strings.TrimSpace(text.String()), true)
-		if err == nil {
-			s.mu.Lock()
-			s.changes = changes
-			s.revisions = revisions
-			s.mu.Unlock()
-		}
-		s.finish(err)
+		s.finish(s.review(ctx, id, key, model))
 	}()
+	return nil
+}
+
+// review sends the transcript in batches and publishes the proposal only when every batch is complete.
+func (s *Service) review(ctx context.Context, id uint64, key, model string) error {
+	s.report("reviewing", 0)
+	batches, err := editorial.Batches(s.session.Snapshot().Original, 12000)
+	if err != nil {
+		_ = s.session.Reviewed(id, "", false)
+		return err
+	}
+	var parts []string
+	var changes []editorial.Change
+	var revisions []providers.Revision
+	for i, batch := range batches {
+		result, err := s.client.Review(ctx, key, model, batch, true)
+		if err != nil {
+			_ = s.session.Reviewed(id, "", false)
+			return err
+		}
+		s.report("reviewing", float64(i+1)/float64(len(batches)))
+		changes = append(changes, result.Changes...)
+		revisions = append(revisions, result)
+		for _, seg := range result.Segments {
+			parts = append(parts, strings.TrimSpace(seg.Text))
+		}
+	}
+	if err = s.session.Reviewed(id, strings.Join(parts, "\n\n"), true); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	s.changes = changes
+	s.revisions = revisions
+	s.mu.Unlock()
 	return nil
 }
 func (s *Service) Cancel(id uint64) error {
@@ -270,7 +352,7 @@ func (s *Service) DeleteRemote(id uint64, confirmed bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.busy || id != s.session.Snapshot().ID || !confirmed || s.remoteID == "" {
-		return errors.New("exclusão remota não confirmada ou indisponível")
+		return errors.New("exclusão do registro não confirmada ou indisponível")
 	}
 	key, err := s.store.Get("assemblyai")
 	if err != nil {
@@ -289,8 +371,9 @@ func (s *Service) finish(err error) {
 	defer s.mu.Unlock()
 	s.busy = false
 	s.cancel = nil
+	s.stage, s.progress = "", 0
 	if err != nil {
-		s.message = err.Error()
+		s.message = describe(err)
 	}
 }
 

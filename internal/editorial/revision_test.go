@@ -7,14 +7,14 @@ import (
 
 func TestBatchesCoverage(t *testing.T) {
 	doc := domain.Transcript{Utterances: []domain.Utterance{{Speaker: "A", Text: "Viu 12 pessoas?"}, {Speaker: "B", Text: "Não. Ouvi dizer."}, {Speaker: "B", Text: "Talvez fossem duas."}}}
-	batches, err := Batches(doc, "B", true, 125)
+	batches, err := Batches(doc, 125)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(batches) != 2 || batches[0][0].ID != "s000001" || batches[1][0].ID != "s000002" {
+	if len(batches) != 3 || batches[0][0].ID != "s000000" || batches[0][0].Speaker != "A" || batches[2][0].ID != "s000002" {
 		t.Fatal("coverage lost")
 	}
-	if _, err := Batches(doc, "B", true, 10); err == nil {
+	if _, err := Batches(doc, 10); err == nil {
 		t.Fatal("oversized unit split or lost")
 	}
 	input := []Segment{

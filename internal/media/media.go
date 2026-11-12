@@ -1,6 +1,7 @@
 package media
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -10,7 +11,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
+
+// formats delimits the demuxers FFmpeg may use: MP3, MP4/MOV/M4A, MKV/WebM, WAV, OGG/Opus, FLAC, AAC, AVI and ASF (WMV/WMA).
+const formats = "mp3,mov,matroska,webm,wav,ogg,flac,aac,avi,asf"
 
 type Track struct {
 	Index    int    `json:"index"`
@@ -28,6 +33,7 @@ type Info struct {
 	Format  struct {
 		Name     string `json:"format_name"`
 		Duration string `json:"duration"`
+		Size     string `json:"size"`
 	} `json:"format"`
 }
 type Tools struct{ FFmpeg, FFprobe string }
@@ -44,14 +50,15 @@ func (t Tools) Inspect(ctx context.Context, path string) (Info, error) {
 	if err != nil || !stat.Mode().IsRegular() {
 		return result, errors.New("arquivo de mídia inválido")
 	}
-	cmd := exec.CommandContext(ctx, t.FFprobe, "-v", "error", "-protocol_whitelist", "file,pipe", "-format_whitelist", "mp3,mov,matroska,webm,wav,ogg,flac,aac", "-show_streams", "-show_format", "-of", "json", path)
+	cmd := exec.CommandContext(ctx, t.FFprobe, "-v", "error", "-protocol_whitelist", "file,pipe", "-format_whitelist", formats, "-show_streams", "-show_format", "-of", "json", path)
 	var out limitedBuffer
 	cmd.Stdout = &out
+	hideWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
 			return result, ctx.Err()
 		}
-		return result, errors.New("ffprobe indisponível ou mídia inválida")
+		return result, errors.New("não foi possível ler a mídia: arquivo corrompido, formato sem suporte ou ffprobe ausente na pasta tools")
 	}
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		return result, errors.New("resposta ffprobe inválida")
@@ -69,9 +76,38 @@ func (t Tools) Inspect(ctx context.Context, path string) (Info, error) {
 	return result, nil
 }
 
+// run executes FFmpeg reporting real progress (processed time over total duration) when measurable.
+func (t Tools) run(ctx context.Context, args []string, info Info, report func(float64)) error {
+	total, _ := strconv.ParseFloat(info.Format.Duration, 64)
+	cmd := exec.CommandContext(ctx, t.FFmpeg, append([]string{"-progress", "pipe:1", "-nostats"}, args...)...)
+	hideWindow(cmd)
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err = cmd.Start(); err != nil {
+		return err
+	}
+	scanner := bufio.NewScanner(out)
+	for scanner.Scan() {
+		value, found := strings.CutPrefix(scanner.Text(), "out_time_us=")
+		if !found || report == nil || total <= 0 {
+			continue
+		}
+		if us, err := strconv.ParseFloat(value, 64); err == nil && us >= 0 {
+			report(min(us/1e6/total, 1))
+		}
+	}
+	return cmd.Wait()
+}
+
 // Prepare validates decoding. A returned cleanup must always be deferred by the caller.
-func (t Tools) Prepare(ctx context.Context, path string, info Info, index int) (string, func(), error) {
+// report receives the stage ("validating" or "converting") and a fraction in [0,1].
+func (t Tools) Prepare(ctx context.Context, path string, info Info, index int, report func(stage string, fraction float64)) (string, func(), error) {
 	noop := func() {}
+	if report == nil {
+		report = func(string, float64) {}
+	}
 	var track *Track
 	for i := range info.Streams {
 		if info.Streams[i].Index == index {
@@ -81,12 +117,15 @@ func (t Tools) Prepare(ctx context.Context, path string, info Info, index int) (
 	if track == nil {
 		return "", noop, errors.New("trilha de áudio inexistente")
 	}
-	args := []string{"-nostdin", "-v", "error", "-xerror", "-protocol_whitelist", "file,pipe", "-format_whitelist", "mp3,mov,matroska,webm,wav,ogg,flac,aac", "-i", path, "-map", fmt.Sprintf("0:%d", index), "-vn"}
+	args := []string{"-nostdin", "-v", "error", "-xerror", "-protocol_whitelist", "file,pipe", "-format_whitelist", formats, "-i", path, "-map", fmt.Sprintf("0:%d", index), "-vn"}
 	// MP3 containers with a single MP3 audio stream can be uploaded without rewriting.
 	if info.Format.Name == "mp3" && track.Codec == "mp3" && len(info.Streams) == 1 {
-		cmd := exec.CommandContext(ctx, t.FFmpeg, append(args, "-f", "null", "-")...)
-		if err := cmd.Run(); err != nil {
-			return "", noop, errors.New("falha na validação do áudio")
+		report("validating", 0)
+		if err := t.run(ctx, append(args, "-f", "null", "-"), info, func(f float64) { report("validating", f) }); err != nil {
+			if ctx.Err() != nil {
+				return "", noop, ctx.Err()
+			}
+			return "", noop, errors.New("falha na validação do áudio: o MP3 parece corrompido")
 		}
 		return path, noop, nil
 	}
@@ -119,7 +158,8 @@ func (t Tools) Prepare(ctx context.Context, path string, info Info, index int) (
 		return "", noop, errors.New("taxa incompatível com MP3; conversão automática recusada")
 	}
 	args = append(args, "-c:a", "libmp3lame", "-q:a", "2", "-ac", strconv.Itoa(track.Channels), "-ar", track.Rate, "-n", output)
-	if err := exec.CommandContext(ctx, t.FFmpeg, args...).Run(); err != nil {
+	report("converting", 0)
+	if err := t.run(ctx, args, info, func(f float64) { report("converting", f) }); err != nil {
 		cleanup()
 		if ctx.Err() != nil {
 			return "", noop, ctx.Err()

@@ -10,15 +10,13 @@ import (
 type State string
 
 const (
-	AwaitConsent       State = "awaiting_consent"
-	AwaitTrack         State = "awaiting_track"
-	Transcribing       State = "transcribing"
-	AwaitSpeaker       State = "awaiting_speaker"
-	AwaitReviewConsent State = "awaiting_review_consent"
-	Reviewing          State = "reviewing"
-	Ready              State = "ready"
-	Failed             State = "failed"
-	Cancelled          State = "cancelled"
+	AwaitTrack   State = "awaiting_track"
+	AwaitStart   State = "awaiting_start"
+	Transcribing State = "transcribing"
+	Reviewing    State = "reviewing"
+	Ready        State = "ready"
+	// Failed means the transcript exists but the review did not finish; only the review is repeated.
+	Failed State = "failed"
 )
 
 type Snapshot struct {
@@ -26,7 +24,6 @@ type Snapshot struct {
 	File     string
 	State    State
 	Track    int
-	Speaker  string
 	Original domain.Transcript
 	Proposal string
 	Edited   string
@@ -40,7 +37,7 @@ type Session struct {
 	tracks []int
 }
 
-// Open invalidates all results and authorizations belonging to the preceding file.
+// Open invalidates all results belonging to the preceding file.
 func (s *Session) Open(file string, tracks []int) (uint64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -49,7 +46,7 @@ func (s *Session) Open(file string, tracks []int) (uint64, error) {
 	}
 	s.next++
 	s.tracks = append([]int(nil), tracks...)
-	s.doc = Snapshot{ID: s.next, File: file, State: AwaitConsent, Track: tracks[0]}
+	s.doc = Snapshot{ID: s.next, File: file, State: AwaitStart, Track: tracks[0]}
 	if len(tracks) > 1 {
 		s.doc.State = AwaitTrack
 	}
@@ -64,57 +61,42 @@ func (s *Session) SelectTrack(id uint64, track int) error {
 	for _, v := range s.tracks {
 		if v == track {
 			s.doc.Track = track
-			s.doc.State = AwaitConsent
+			s.doc.State = AwaitStart
 			return nil
 		}
 	}
 	return errors.New("trilha inexistente")
 }
 
-// Authorize accepts only the provider required by the current stage, per file.
-func (s *Session) Authorize(id uint64, provider string, confirmed bool) error {
+// Begin starts the single processing run of the current file. Authorization to send the content is
+// given by the user outside the app, so no per-file confirmation is recorded here.
+func (s *Session) Begin(id uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !confirmed {
-		return errors.New("envio não autorizado")
+	if !s.is(id, AwaitStart) {
+		return errors.New("início fora de etapa")
 	}
-	switch {
-	case provider == "assemblyai" && s.is(id, AwaitConsent):
-		s.doc.State = Transcribing
-	case provider == "deepseek" && s.is(id, AwaitReviewConsent):
-		s.doc.State = Reviewing
-	default:
-		return errors.New("autorização fora de etapa")
-	}
+	s.doc.State = Transcribing
 	return nil
 }
+
+// Transcribed stores the immutable original and moves straight to the review. Every file holds a
+// single deponent, so a transcript without utterances becomes one segment with the whole text.
 func (s *Session) Transcribed(id uint64, t domain.Transcript) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.is(id, Transcribing) {
 		return errors.New("resultado antigo ou fora de etapa")
 	}
-	if t.Status != "completed" || t.Text == "" || len(t.Utterances) == 0 {
-		return errors.New("transcrição incompleta ou sem falantes")
+	if t.Status != "completed" || t.Text == "" {
+		return errors.New("transcrição incompleta")
 	}
 	s.doc.Original = clone(t)
-	s.doc.State = AwaitSpeaker
+	if len(s.doc.Original.Utterances) == 0 {
+		s.doc.Original.Utterances = []domain.Utterance{{Speaker: "A", Text: t.Text}}
+	}
+	s.doc.State = Reviewing
 	return nil
-}
-func (s *Session) Identify(id uint64, speaker string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if !s.is(id, AwaitSpeaker) {
-		return errors.New("identificação fora de etapa")
-	}
-	for _, u := range s.doc.Original.Utterances {
-		if u.Speaker == speaker && speaker != "" {
-			s.doc.Speaker = speaker
-			s.doc.State = AwaitReviewConsent
-			return nil
-		}
-	}
-	return errors.New("falante inexistente")
 }
 func (s *Session) Reviewed(id uint64, proposal string, complete bool) error {
 	s.mu.Lock()
@@ -141,24 +123,43 @@ func (s *Session) Edit(id uint64, text string) error {
 	return nil
 }
 
-// RetryReview keeps the original and requires a new explicit review authorization.
+// RetryReview repeats only the review; the transcript already obtained is kept.
 func (s *Session) RetryReview(id uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.is(id, Failed) || s.doc.Speaker == "" {
+	if !s.is(id, Failed) || len(s.doc.Original.Utterances) == 0 {
 		return errors.New("revisão indisponível")
 	}
-	s.doc.State = AwaitReviewConsent
+	s.doc.State = Reviewing
 	return nil
 }
+
+// Cancel only interrupts running work, so late results are rejected. Nothing already obtained is
+// discarded: cancelling the review keeps the transcript and leaves the review repeatable.
 func (s *Session) Cancel(id uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.doc.ID != id || id == 0 {
 		return errors.New("sessão antiga")
 	}
-	s.doc.State = Cancelled
+	switch s.doc.State {
+	case Transcribing:
+		s.doc.State = AwaitStart
+	case Reviewing:
+		s.doc.State = Failed
+	default:
+		return errors.New("não há processamento em andamento")
+	}
 	return nil
+}
+
+// TranscriptionFailed returns to the start step so the user can try again.
+func (s *Session) TranscriptionFailed(id uint64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.is(id, Transcribing) {
+		s.doc.State = AwaitStart
+	}
 }
 func (s *Session) Snapshot() Snapshot {
 	s.mu.Lock()
