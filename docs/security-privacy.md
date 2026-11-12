@@ -1,6 +1,6 @@
 # Segurança e privacidade
 
-Cada arquivo exige confirmação aplicável separada para AssemblyAI (áudio) e DeepSeek (texto). Sem autorização, a operação não inicia. Sem pseudonimização. O aplicativo não determina se o usuário pode legalmente enviar um depoimento: não use dados sigilosos enquanto as condições aplicáveis dos provedores não estiverem verificadas.
+A autorização para enviar o áudio à AssemblyAI e o texto à DeepSeek é dada em termo externo ao aplicativo; o aplicativo não pede confirmação por arquivo (ver `docs/decisions.md`, rodada de 2026-11-12). Sem pseudonimização. O aplicativo não determina se o usuário pode legalmente enviar um depoimento: não use dados sigilosos enquanto as condições aplicáveis dos provedores não estiverem verificadas.
 
 Chaves são digitadas em campos de senha, transmitidas somente pela ponte local e salvas no Windows Credential Manager como credenciais genéricas do usuário, destinos `DepoimentoStudio/assemblyai` e `DepoimentoStudio/deepseek`. Não há leitura de segredo pela interface. A remoção deve ser feita nas configurações antes da desinstalação, se desejada. O Credential Manager protege armazenamento, não impede um processo malicioso na mesma conta de acessar segredos. Strings em memória Go não têm garantia de apagamento físico imediato.
 

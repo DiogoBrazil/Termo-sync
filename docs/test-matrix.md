@@ -6,15 +6,15 @@
 |---|---|---|
 | Go | `go test -race ./...`, `go vet ./...` e `GOOS=windows GOARCH=amd64 go vet ./...` | Passaram integralmente |
 | Biblioteca padrão | `go list encoding/json` | Localizado; sem dependência externa |
-| Estados | Trilhas, consentimentos, falantes, falha, retry, cancelamento, resultados antigos, edição vazia (`internal/application/session_test.go`, `settings_test.go`) | Passaram |
+| Estados | Trilhas, início único, transcrição sem segmentos, falha, retry, cancelamento, resultados antigos, edição vazia (`internal/application/session_test.go`, `settings_test.go`) | Passaram |
 | HTTP | 401, 402, 429, 503, redirecionamento, destinos, JSON inválido/trailing/null, cancelamento, POST único (`internal/providers/http_test.go`) | Passaram (mocks) |
-| DeepSeek | Bearer, `thinking.type: disabled`, `stream: false`, truncamento (`length`), metadados (`usage`/`model`), cobertura e falante (`internal/providers/deepseek_test.go`) | Passaram (mocks) |
+| DeepSeek | Bearer, `thinking.type: disabled`, `stream: false`, truncamento (`length`), metadados (`usage`/`model`), cobertura e rótulos (`internal/providers/deepseek_test.go`) | Passaram (mocks) |
 | AssemblyAI | Upload binário, criação, original bruto e modelo, polling e cancelamento, exclusão manual, ID inválido (`internal/providers/assemblyai_test.go`) | Passaram (mocks; chamada remota real pendente) |
-| Fidelidade editorial | Perguntas separadas das respostas, depoente obrigatório, exclusão de perguntas na narrativa, números/datas, negações/rumores/incertezas/contradições, segmentação sem perdas (`internal/editorial/policy_test.go`, `revision_test.go`) | Passaram |
+| Fidelidade editorial | Regra de depoente único no prompt, números/datas, negações/rumores/incertezas/contradições, segmentação sem perdas (`internal/editorial/policy_test.go`, `revision_test.go`) | Passaram |
 | Mídia e temporários | MP3 direto, vídeo convertido, duas trilhas, corrupção, sem áudio, nomes especiais, cancelamento, limpeza após falha e recuperação de resíduos >24h (`internal/media/media_test.go`) | Passaram com FFmpeg Linux 7.0.2 local e dados sintéticos |
-| Integração | WAV sintético → FFmpeg → AssemblyAI mock → falante → DeepSeek mock → edição humana → exclusão remota mock (`internal/application/workflow_test.go`) | Passou |
+| Integração | WAV sintético → FFmpeg → AssemblyAI mock → DeepSeek mock (sequência automática) → edição humana → exclusão remota mock (`internal/application/workflow_test.go`) | Passou |
 | Frontend (unidade) | Ponte nativa obrigatória e argumentos tipados (`frontend/src/backend.test.ts`) | Passou (Vitest) |
-| Frontend (E2E/UI) | Consentimentos desmarcados/bloqueio, limpeza de API Keys, preservação e cópia de edição humana, contraste WCAG AA (`>= 4.5:1`), temas claro/escuro, `1366×768`, `1920×1080`, `900×768` (abas), DPI 200%, teclado e `prefers-reduced-motion` (`frontend/e2e/studio.spec.ts`) | Passou (Playwright) |
+| Frontend (E2E/UI) | Início sem confirmações e sem nomes de serviços externos, progresso por etapa, original e proposta só ao final, sucesso que some em 2 s, limpeza de API Keys, preservação e cópia de edição humana, contraste WCAG AA (`>= 4.5:1`), temas claro/escuro, `1366×768`, `1920×1080`, `900×768`, `700×768` (abas), modal de confirmação centralizado, troca de arquivo com decisão sobre o registro, erro de ação que some em 6 s, DPI 200%, teclado e `prefers-reduced-motion` (`frontend/e2e/studio.spec.ts`) | Passou (Playwright) |
 | Dependências JS | `npm audit` | Zero vulnerabilidades |
 | Windows x64 | Compilação cruzada do executável Wails (`./scripts/build-windows.sh` → `build/DepoimentoStudio.exe`) | Passou com frontend final embutido |
 | Governança de release | `python3 scripts/check-release.py` e guarda `!ifndef REDISTRIBUTION_VERIFIED` em `packaging/installer.nsi` | Bloqueio fail-closed ativo até verificação completa das fontes/licenças do bundle FFmpeg |
@@ -26,10 +26,10 @@ Os testes que requerem mídia são pulados quando `DEPOIMENTO_TEST_FFMPEG` e `DE
 1. Registrar versão/build do Windows, resolução, DPI, WebView2 e hash SHA-256 do executável (`build/DepoimentoStudio.exe.sha256`). Não usar depoimento real no primeiro teste.
 2. Instalar por usuário sem administrador (após conclusão do pacote de licenças FFmpeg) ou executar na pasta de teste local conforme `docs/install.md`. Verificar abertura e desinstalação. Testar o bloqueio/encaminhamento quando falta WebView2.
 3. Abrir configurações; inserir chaves novas; salvar; confirmar indicador. Fechar/reabrir e confirmar persistência no Credential Manager (`DepoimentoStudio/assemblyai` e `DepoimentoStudio/deepseek`). Remover e confirmar bloqueio de envio sem chave. Nunca enviar prints com segredo visível.
-4. Selecionar MP3 fictício; negar consentimento e comprovar ausência de envio. Confirmar autorização AssemblyAI e limitação de hesitações em português; processar.
+4. Selecionar MP3 fictício de um único depoente; ler os avisos e iniciar a transcrição.
 5. Repetir com vídeo fictício e múltiplas trilhas: exigir escolha manual. Conferir que original não foi sobrescrito e temporário tem ACL privada e é limpo.
 6. Cancelar validação, conversão, upload, polling e revisão. Conferir UI responsiva, liberação do arquivo e ausência de publicação tardia. Cancelamento local não deve ser apresentado como exclusão remota.
-7. Ouvir e identificar manualmente o depoente. Tentar revisar antes disso: bloqueado. Confirmar DeepSeek separadamente. Verificar diálogo e narrativa com perguntas contendo fatos que não estão nas respostas.
+7. Conferir que a revisão começa sozinha após a transcrição e que original e proposta aparecem juntos só ao final.
 8. Conferir negativas, números, datas, rumores, contradições e incertezas. Edição humana deve sobreviver a consultas de estado e prevalecer no copiar/exportar. Verificar TXT UTF-8 com acentos e quebras de linha CRLF.
 9. Induzir saldo insuficiente/credencial inválida sem compartilhar chaves; conferir mensagem sem conteúdo remoto. Não repetir POST automaticamente após falha ambígua.
 10. Solicitar exclusão remota manual; verificar no painel do provedor as condições/artefatos aplicáveis. Repetir revisão sem transcrever novamente.

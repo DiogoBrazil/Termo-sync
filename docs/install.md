@@ -8,6 +8,8 @@ Windows PowerShell: `./scripts/build-windows.ps1`. Linux: `./scripts/build-windo
 
 ## Pasta de teste local
 
+Montagem usada no teste manual (a partir do WSL/Linux, após `./scripts/build-windows.sh`): copie `build/DepoimentoStudio.exe` para `build/portable/`, mantenha em `build/portable/tools/` o `ffmpeg.exe`, o `ffprobe.exe` e as DLLs do zip registrado em `docs/ffmpeg-manifest.json` (hash conferido), e copie a pasta `build/portable` para um diretório do Windows. Execute o `.exe` a partir do Windows, não de um caminho `\\wsl$`.
+
 Coloque o executável e as ferramentas verificadas nesta estrutura:
 
 ```
@@ -26,11 +28,13 @@ Windows 11 x64 requer Microsoft Edge WebView2 Evergreen Runtime. Site oficial: h
 
 ## API Keys para testar
 
-Abra **Configurações → API Keys** no app. Digite uma chave nova de cada provedor e clique em Salvar. Campos são de senha e são limpos após a tentativa de gravação; indicador mostra somente configurada/não configurada. Remova a chave pelo mesmo painel. Nenhuma chave precisa ser escrita no código, em .env ou em arquivo JSON.
+Abra **Configurações** no app. Digite uma chave nova de cada provedor e clique em Salvar. Campos são de senha e são limpos após a tentativa de gravação; indicador mostra somente configurada/não configurada. Remova a chave pelo mesmo painel. Nenhuma chave precisa ser escrita no código, em .env ou em arquivo JSON.
 
-Use somente mídia fictícia autorizada nos primeiros testes. As confirmações por arquivo/provedor são independentes da existência da API Key. Consulte docs/test-matrix.md.
+Use somente mídia fictícia autorizada nos primeiros testes. O aplicativo não pede confirmação por arquivo; a autorização é dada em termo externo. Consulte docs/test-matrix.md.
 
 ## Empacotamento
+
+O instalador atual é o MSI descrito ao final deste arquivo. O script NSIS abaixo é anterior e não foi atualizado.
 
 A especificação NSIS é `packaging/installer.nsi`. Depois de preparar ferramentas e licenças em build/tools e build/licenses, execute `makensis packaging/installer.nsi` a partir da raiz (o NSIS resolve arquivos relativamente ao script). Resultado: build/DepoimentoStudio-Setup.exe, instalação por usuário em LocalAppData/Programs.
 
@@ -39,3 +43,10 @@ A redistribuição do FFmpeg permanece condicionada à verificação de fontes, 
 Desinstalação remove arquivos instalados e atalhos. Credenciais genéricas não são removidas implicitamente: remova-as em Configurações antes, se desejado. Exportações escolhidas pelo usuário e registros remotos dos provedores não são removidos pela desinstalação.
 
 A release final depende do roteiro Windows 11 e da aprovação funcional do usuário.
+
+## Instalador MSI
+
+    python3 scripts/build-msi.py --teste-local   # só para a própria máquina
+    python3 scripts/build-msi.py                 # release; exige scripts/check-release.py aprovado
+
+Requer `wixl` (`sudo apt install wixl`) e `build/portable` atualizado. O MSI instala para todos os usuários em `C:\Program Files\Depoimento Studio` (pede administrador) e cria atalhos no Menu Iniciar e na Área de Trabalho. Para desinstalar, use "Aplicativos instalados" do Windows.

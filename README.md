@@ -4,6 +4,7 @@ Aplicativo desktop individual para **Windows 11 x64** construído com **Go 1.26 
 
 ## Documentação do projeto
 
+- [Estado atual e como continuar em outra máquina](docs/status.md)
 - [Plano técnico e funcional](docs/plan.md)
 - [Andamento e entrega da implementação](docs/implementation.md)
 - [Decisões aprovadas](docs/decisions.md)
@@ -40,7 +41,10 @@ cd ..
 # 4. Gerar o executável Windows x64 com frontend embutido e hash SHA-256
 ./scripts/build-windows.sh
 
-# 5. Verificar pré-condições de redistribuição antes de empacotar com NSIS
+# 5. Gerar o instalador MSI para a própria máquina (requer wixl e build/portable montado; ver docs/status.md)
+python3 scripts/build-msi.py --teste-local
+
+# 6. Verificar pré-condições de redistribuição antes de gerar o instalador de release
 python3 scripts/check-release.py
 ```
 
@@ -48,7 +52,7 @@ No Windows PowerShell, utilize `./scripts/build-windows.ps1`.
 
 ## Limitações e estado da release
 
-- **Clientes HTTP validados por mocks:** Nenhuma chamada paga ou com credenciais reais foi executada durante o desenvolvimento.
-- **Hesitações em português (`disfluencies`):** Documentado oficialmente pela AssemblyAI apenas para inglês; o aplicativo exige confirmação explícita dessa limitação e conferência com o áudio original antes de transcrever, sem fallback silencioso de modelo.
-- **Redistribuição do FFmpeg:** `docs/ffmpeg-manifest.json` mantém `redistribution_verified: false` até que as fontes completas e notices de todas as bibliotecas do bundle sejam anexadas e verificadas; `scripts/check-release.py` e `packaging/installer.nsi` bloqueiam o empacotamento de release enquanto essa verificação estiver pendente.
+- **Provedores:** os testes automatizados usam servidores simulados; o fluxo com chaves reais foi testado manualmente pelo usuário no Windows 11 em 2026-11-12.
+- **Hesitações em português (`disfluencies`):** Documentado oficialmente pela AssemblyAI apenas para inglês; o aplicativo avisa dessa limitação antes de iniciar, em linguagem simples e sem caixa de confirmação, e não troca de modelo silenciosamente.
+- **Redistribuição do FFmpeg:** `docs/ffmpeg-manifest.json` mantém `redistribution_verified: false` até que as fontes completas e notices de todas as bibliotecas do bundle sejam anexadas e verificadas; `scripts/check-release.py`, `scripts/build-msi.py` e `packaging/installer.nsi` bloqueiam o empacotamento de release enquanto essa verificação estiver pendente. O MSI `--teste-local` serve só para a própria máquina.
 - **Assinatura e validação final:** Os binários não possuem assinatura Authenticode (dependente de certificado externo) e a release permanece condicionada à execução do roteiro funcional em máquina/VM **Windows 11 x64 limpa** pelo usuário ([docs/test-matrix.md](docs/test-matrix.md)).

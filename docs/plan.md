@@ -7,7 +7,7 @@ Construir aplicativo desktop individual para **Windows 11 x64**, operando sobre 
 2. **Proposta revisada** (gerada sob regras editoriais conservadoras);
 3. **Edições humanas** (preservadas separadamente e prioritárias ao copiar/exportar).
 
-Regras de negócio e segurança confirmadas:
+Regras de negócio e segurança confirmadas (os itens "Formato" e "Consentimento" foram substituídos em 2026-11-12; ver `docs/decisions.md`):
 - **Formato:** Diálogo (`Falante X: ...`) como padrão; narrativa em primeira pessoa somente após identificação manual do depoente e enviando à revisão exclusivamente os segmentos do depoente confirmado, sem jamais usar perguntas de terceiros para completar respostas.
 - **Consentimento e privacidade:** Sem pseudonimização automática. Autorização explícita, inicialmente desmarcada, por arquivo e por provedor (AssemblyAI para áudio; DeepSeek para texto), além de ciência explícita da limitação de hesitações em português antes da transcrição.
 - **Saída e retenção local:** Edição da proposta na interface, cópia para área de transferência e exportação em `.txt` UTF-8 (CRLF no Windows), sem sobrescrever o arquivo de mídia original, sem geração de `.docx` e sem histórico automático em disco.

@@ -8,7 +8,7 @@ Upload binário em `https://api.assemblyai.com/v2/upload`; criação em `/v2/tra
 
 **Limitação corrigida em relação ao plano inicial:** o changelog oficial documenta disfluencies como inglês apenas. Portanto o parâmetro não comprova preservação de hesitações em português. A interface exige reconhecer isso e a necessidade de ouvir o áudio; não declara transcrição literal garantida. Não se troca silenciosamente de modelo e não se adiciona um recurso pago de prompting sem decisão explícita.
 
-Resposta bruta, ID, texto, segmentos, tempos e modelo efetivo retornado são mantidos em memória. O JSON bruto não é exposto em snapshots da interface nem persistido. Credenciais e conteúdo não entram em logs. Se o provedor não fornecer falantes, a revisão fica bloqueada: falta implementar identificação manual por segmentos para esse caso específico.
+Resposta bruta, ID, texto, segmentos, tempos e modelo efetivo retornado são mantidos em memória. O JSON bruto não é exposto em snapshots da interface nem persistido. Credenciais e conteúdo não entram em logs. Os rótulos de falante servem só para segmentar: todo o texto é do depoente. Sem segmentos, o texto inteiro vira um segmento único.
 
 Fontes oficiais:
 - https://www.assemblyai.com/docs/api-reference/transcripts/submit
